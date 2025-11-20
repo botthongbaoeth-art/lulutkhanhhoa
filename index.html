@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>CỨU HỘ KHẨN CẤP | Khánh Hòa - Ninh Thuận</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { margin: 0; background: #f3f4f6; height: 100vh; overflow: hidden; font-family: system-ui, -apple-system, sans-serif; }
+    #map { height: 85vh; width: 100%; border-radius: 1.5rem; }
+    .pulse { animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.7; } }
+    .tab-btn { @apply px-6 py-3.5 rounded-full font-bold text-sm transition-all duration-300 shadow-xl hover:scale-105 active:scale-95; }
+  </style>
+</head>
+<body class="flex flex-col h-screen">
+
+  <header class="bg-gradient-to-r from-red-600 to-red-700 text-white shadow-2xl z-50 p-4 text-center">
+    <h1 class="text-3xl font-bold">CỨU HỘ KHẨN CẤP</h1>
+    <p class="text-lg">Khánh Hòa • Ninh Thuận</p>
+  </header>
+
+  <div id="map"></div>
+
+  <div class="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 bg-white rounded-2xl shadow-2xl p-5 w-11/12 max-w-md">
+    <button onclick="openReportForm()" class="w-full bg-red-600 hover:bg-red-700 text-white py-5 rounded-xl text-xl font-bold">
+      GỬI YÊU CẦU CỨU HỘ NGAY
+    </button>
+  </div>
+
+  <!-- Form gửi báo cáo -->
+  <div id="reportForm" class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl p-8 w-full max-w-md">
+      <h2 class="text-2xl font-bold text-red-600 mb-4">YÊU CẦU CỨU HỘ KHẨN CẤP</h2>
+      <textarea id="message" placeholder="Mô tả tình huống (ví dụ: bị kẹt lũ ở Cam Ranh...)" class="w-full p-4 border rounded-lg mb-3" rows="4"></textarea>
+      <input type="tel" id="phone" placeholder="Số điện thoại liên lạc (bắt buộc)" class="w-full p-4 border rounded-lg mb-3" />
+      <input type="number" id="people" placeholder="Số người cần cứu (mặc định 1)" class="w-full p-4 border rounded-lg mb-5" value="1" min="1" />
+      <div class="flex gap-3">
+        <button onclick="sendReport()" class="flex-1 bg-red-600 hover:bg-red-700 text-white py-4 rounded-lg font-bold">GỬI NGAY</button>
+        <button onclick="closeReportForm()" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-4 rounded-lg font-bold">Hủy</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    let map, marker, lat = 12.24, lng = 109.19;
+
+    function initMap() {
+      map = L.map('map').setView([lat, lng], 10);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+      marker = L.marker([lat, lng], { draggable: true }).addTo(map)
+        .bindPopup("Kéo để chọn vị trí chính xác").openPopup();
+      marker.on('dragend', e => {
+        const pos = e.target.getLatLng();
+        lat = pos.lat; lng = pos.lng;
+      });
+      map.on('click', e => { marker.setLatLng(e.latlng); lat = e.latlng.lat; lng = e.latlng.lng; });
+    }
+
+    function openReportForm() { document.getElementById('reportForm').classList.remove('hidden'); }
+    function closeReportForm() { document.getElementById('reportForm').classList.add('hidden'); }
+
+    async function sendReport() {
+      const msg = document.getElementById('message').value.trim();
+      const phone = document.getElementById('phone').value.trim();
+      const people = document.getElementById('people').value || 1;
+      if (!msg || !phone) return alert('Vui lòng nhập đủ thông tin!');
+      
+      await fetch('/reports.js', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lat, lng, message: msg, phone, people, type: 'victim' })
+      });
+      alert('ĐÃ GỬI THÀNH CÔNG! Đội cứu hộ đang đến ngay!');
+      closeReportForm();
+    }
+
+    window.onload = initMap;
+  </script>
+</body>
+</html>
