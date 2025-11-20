@@ -9,38 +9,116 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { margin: 0; background: #f3f4f6; height: 100vh; overflow: hidden; font-family: system-ui, -apple-system, sans-serif; }
-    #map { height: 85vh; width: 100%; border-radius: 1.5rem; }
+    .map-disabled { pointer-events: none !important; filter: blur(10px) brightness(0.7); transition: all 0.4s ease; }
+    #map { height: 85% !important; width: 100% !important; border-radius: 1.5rem; }
     .pulse { animation: pulse 2s infinite; }
     @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.7; } }
-    .tab-btn { @apply px-6 py-3.5 rounded-full font-bold text-sm transition-all duration-300 shadow-xl hover:scale-105 active:scale-95; }
+    .tab-btn {
+      @apply px-6 py-3.5 rounded-full font-bold text-sm relative transition-all duration-300 shadow-xl
+             hover:scale-105 active:scale-95 min-w-[120px] flex items-center justify-center gap-2;
+    }
+    .badge-count {
+      @apply absolute -top-2 -right-2 bg-white text-xs font-bold rounded-full w-7 h-7 flex items-center justify-center shadow-lg border-2 border-white min-w-[28px];
+    }
+    .badge-count.zero { @apply bg-gray-400 text-gray-700 border-gray-400; }
   </style>
 </head>
 <body class="flex flex-col h-screen">
-
-  <header class="bg-gradient-to-r from-red-600 to-red-700 text-white shadow-2xl z-50 p-4 text-center">
-    <h1 class="text-3xl font-bold">CỨU HỘ KHẨN CẤP</h1>
-    <p class="text-lg">Khánh Hòa • Ninh Thuận</p>
+  <!-- HEADER -->
+  <header class="bg-gradient-to-r from-green-600 to-green-700 text-white shadow-2xl z-50">
+    <div class="flex items-center justify-between px-5 py-3">
+      <a href="/" class="flex items-center gap-3 hover:scale-105 transition-all duration-300">
+        <i class="fas fa-location-dot text-3xl text-red-400"></i>
+        <div>
+          <h1 class="text-2xl font-bold tracking-tight">CỨU HỘ</h1>
+          <p class="text-xs opacity-90">Khánh Hòa • Ninh Thuận</p>
+        </div>
+      </a>
+      <a href="https://fb.com/lenhanriel" target="_blank" class="flex items-center gap-2 bg-white/20 hover:bg-white/30 px-4 py-2 rounded-full transition backdrop-blur">
+        <i class="fab fa-facebook text-xl"></i>
+        <span class="font-medium hidden sm:inline">Liên hệ</span>
+      </a>
+    </div>
+    <!-- THANH NÚT LỌC -->
+    <div class="bg-white/10 backdrop-blur px-5 py-6">
+      <div class="flex justify-center gap-5 flex-wrap">
+        <button onclick="filterReports('all')" id="btn-all" class="group relative px-9 py-5 rounded-2xl font-bold text-lg shadow-2xl transition-all duration-300 hover:scale-110 active:scale-95 bg-white text-gray-800 border-3 border-white">
+          <i class="fas fa-globe text-xl mr-2"></i> Tất cả
+          <span id="allCount" class="absolute -top-3 -right-3 bg-red-600 text-white text-sm font-bold rounded-full w-9 h-9 flex items-center justify-center shadow-xl border-4 border-white">0</span>
+        </button>
+        <button onclick="filterReports('victim')" id="btn-victim" class="group relative px-9 py-5 rounded-2xl font-bold text-lg shadow-2xl transition-all duration-300 hover:scale-110 active:scale-95 bg-red-600 text-white border-3 border-red-700">
+          <i class="fas fa-heart-crack text-xl mr-2"></i> Cần cứu
+          <span id="victimCount" class="absolute -top-3 -right-3 bg-white text-red-600 text-sm font-bold rounded-full w-9 h-9 flex items-center justify-center shadow-xl border-4 border-white ring-2 ring-red-500 ring-offset-2">0</span>
+        </button>
+        <button onclick="filterReports('rescue')" id="btn-rescue" class="group relative px-9 py-5 rounded-2xl font-bold text-lg shadow-2xl transition-all duration-300 hover:scale-110 active:scale-95 bg-blue-600 text-white border-3 border-blue-700">
+          <i class="fas fa-truck-medical text-xl mr-2"></i> Đội cứu hộ
+          <span id="rescueCount" class="absolute -top-3 -right-3 bg-white text-blue-600 text-sm font-bold rounded-full w-9 h-9 flex items-center justify-center shadow-xl border-4 border-white">0</span>
+        </button>
+        <button onclick="filterReports('warning')" id="btn-warning" class="group relative px-9 py-5 rounded-2xl font-bold text-lg shadow-2xl transition-all duration-300 hover:scale-110 active:scale-95 bg-yellow-500 text-white border-3 border-yellow-600">
+          <i class="fas fa-bell text-xl mr-2"></i> Cảnh báo
+          <span id="warningCount" class="absolute -top-3 -right-3 bg-white text-yellow-700 text-sm font-bold rounded-full w-9 h-9 flex items-center justify-center shadow-xl border-4 border-white">0</span>
+        </button>
+      </div>
+    </div>
   </header>
 
-  <div id="map"></div>
-
-  <div class="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 bg-white rounded-2xl shadow-2xl p-5 w-11/12 max-w-md">
-    <button onclick="openReportForm()" class="w-full bg-red-600 hover:bg-red-700 text-white py-5 rounded-xl text-xl font-bold">
-      GỬI YÊU CẦU CỨU HỘ NGAY
-    </button>
+  <!-- MAIN -->
+  <div class="flex-1 flex overflow-hidden relative">
+    <div class="w-full lg:w-96 bg-gray-100 p-4 overflow-y-auto space-y-5 z-10 shadow-xl">
+      <div id="waterAlertBanner" class="hidden bg-gradient-to-r from-red-600 to-red-800 text-white text-center py-5 rounded-2xl font-bold text-lg shadow-2xl pulse">
+        CẢNH BÁO LŨ KHẨN CẤP<br><span class="text-sm">NHIỀU KHU VỰC ĐÃ VƯỢT BĐ3!</span>
+      </div>
+      <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
+        <div class="bg-gradient-to-r from-pink-600 to-pink-700 text-white px-5 py-4 font-bold text-lg flex items-center gap-3">
+          <i class="fas fa-water"></i> MỰC NƯỚC SÔNG REALTIME
+        </div>
+        <div id="riverLevels" class="p-5 space-y-3"></div>
+        <div class="px-5 pb-4 text-xs text-gray-500 text-right" id="updateTime">Đang tải...</div>
+      </div>
+      <div class="bg-red-50 rounded-2xl shadow-xl overflow-hidden border-2 border-red-600">
+        <div class="bg-red-600 text-white px-5 py-4 font-bold text-lg flex items-center gap-3">
+          <i class="fas fa-exclamation-triangle"></i> CẦN CỨU HỘ KHẨN CẤP
+          <span class="ml-auto bg-white text-red-600 px-3 py-1 rounded-full text-sm font-bold" id="victimCountLeft">0</span>
+        </div>
+        <div id="victimReports" class="p-4 space-y-3 max-h-96 overflow-y-auto"></div>
+      </div>
+      <div class="bg-orange-50 rounded-2xl shadow-xl overflow-hidden border-2 border-orange-600">
+        <div class="bg-gradient-to-r from-orange-500 to-yellow-500 text-white px-5 py-4 font-bold text-lg flex items-center gap-3">
+          <i class="fas fa-bullhorn"></i> CẢNH BÁO & ĐỘI CỨU HỘ
+        </div>
+        <div id="otherReports" class="p-4 space-y-3 max-h-96 overflow-y-auto"></div>
+      </div>
+    </div>
+    <div class="flex-1 relative">
+      <div id="map"></div>
+    </div>
   </div>
 
-  <!-- Form gửi báo cáo -->
-  <div id="reportForm" class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl p-8 w-full max-w-md">
-      <h2 class="text-2xl font-bold text-red-600 mb-4">YÊU CẦU CỨU HỘ KHẨN CẤP</h2>
-      <textarea id="message" placeholder="Mô tả tình huống (ví dụ: bị kẹt lũ ở Cam Ranh...)" class="w-full p-4 border rounded-lg mb-3" rows="4"></textarea>
-      <input type="tel" id="phone" placeholder="Số điện thoại liên lạc (bắt buộc)" class="w-full p-4 border rounded-lg mb-3" />
-      <input type="number" id="people" placeholder="Số người cần cứu (mặc định 1)" class="w-full p-4 border rounded-lg mb-5" value="1" min="1" />
-      <div class="flex gap-3">
-        <button onclick="sendReport()" class="flex-1 bg-red-600 hover:bg-red-700 text-white py-4 rounded-lg font-bold">GỬI NGAY</button>
-        <button onclick="closeReportForm()" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-4 rounded-lg font-bold">Hủy</button>
+  <!-- NÚT GỬI PHẢN ÁNH -->
+  <button onclick="openReportForm()"
+    class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-80 max-w-[90%]
+           bg-green-600 hover:bg-green-700 active:bg-green-800
+           text-white font-bold text-xl py-5 rounded-2xl shadow-2xl
+           flex items-center justify-center gap-3 transition active:scale-95">
+    <i class="fas fa-paper-plane"></i> Gửi phản ánh
+  </button>
+
+  <!-- FORM GỬI -->
+  <div id="reportForm" class="hidden fixed inset-0 z-[9999] flex items-end justify-center">
+    <div class="fixed inset-0 bg-black/70" onclick="closeReportForm()"></div>
+    <div class="relative bg-white w-full max-w-2xl rounded-t-3xl p-6 shadow-2xl animate-slide-up">
+      <div class="flex justify-between items-center mb-5">
+        <h2 class="text-2xl font-bold text-red-600">Gửi yêu cầu cứu hộ</h2>
+        <button onclick="closeReportForm()" class="text-4xl text-gray-500 hover:text-gray-700">×</button>
       </div>
+      <textarea id="message" rows="5" placeholder="Mô tả khẩn cấp..." class="w-full p-4 border-2 border-red-300 rounded-xl focus:border-red-600 outline-none text-lg resize-none"></textarea>
+      <div class="grid grid-cols-2 gap-4 mt-5">
+        <input type="tel" id="phone" placeholder="SĐT (bắt buộc)" class="p-4 border-2 border-red-300 rounded-xl focus:border-red-600 outline-none text-lg" />
+        <input type="number" id="people" value="1" min="1" placeholder="Số người" class="p-4 border-2 border-red-300 rounded-xl focus:border-red-600 outline-none text-lg" />
+      </div>
+      <button id="sendBtn" class="mt-6 w-full bg-red-600 hover:bg-red-700 text-white font-bold text-xl py-5 rounded-2xl transition active:scale-95">
+        GỬI YÊU CẦU NGAY
+      </button>
     </div>
   </div>
 
@@ -49,36 +127,128 @@
     let map, marker, lat = 12.24, lng = 109.19;
 
     function initMap() {
-      map = L.map('map').setView([lat, lng], 10);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-      marker = L.marker([lat, lng], { draggable: true }).addTo(map)
-        .bindPopup("Kéo để chọn vị trí chính xác").openPopup();
-      marker.on('dragend', e => {
-        const pos = e.target.getLatLng();
-        lat = pos.lat; lng = pos.lng;
+      map = L.map('map').setView([lat, lng], 11);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap'
+      }).addTo(map);
+      marker = L.marker([lat, lng], {draggable: true}).addTo(map)
+        .bindPopup('Kéo để chọn vị trí chính xác').openPopup();
+      marker.on('dragend', () => {
+        const p = marker.getLatLng();
+        lat = p.lat.toFixed(6);
+        lng = p.lng.toFixed(6);
       });
-      map.on('click', e => { marker.setLatLng(e.latlng); lat = e.latlng.lat; lng = e.latlng.lng; });
+      navigator.geolocation?.getCurrentPosition(pos => {
+        lat = pos.coords.latitude;
+        lng = pos.coords.longitude;
+        map.setView([lat, lng], 16);
+        marker.setLatLng([lat, lng]);
+      });
     }
 
-    function openReportForm() { document.getElementById('reportForm').classList.remove('hidden'); }
-    function closeReportForm() { document.getElementById('reportForm').classList.add('hidden'); }
+    function openReportForm() {
+      document.getElementById('reportForm').classList.remove('hidden');
+      document.getElementById('map').classList.add('map-disabled');
+    }
+    function closeReportForm() {
+      document.getElementById('reportForm').classList.add('hidden');
+      document.getElementById('map').classList.remove('map-disabled');
+      document.getElementById('message').value = '';
+      document.getElementById('phone').value = '';
+      document.getElementById('people').value = '1';
+    }
 
-    async function sendReport() {
+    // === DỮ LIỆU MỰC NƯỚC THẬT TỪ KTTV (vẫn dùng API cũ – không cần Python) ===
+    async function loadWaterData() {
+      try {
+        const r = await fetch("https://nchmf.gov.vn/KWWS/Station/GetWaterLevel", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ "StationCodes": ["58E01","58E03","58E05","59E01","59E02"] })
+        });
+        const raw = await r.json();
+        const nameMap = { "58E01": "Sông Cái Nha Trang", "58E03": "Cam Ranh", "58E05": "Ninh Hòa", "59E01": "Phan Rang", "59E02": "Sông Dinh Ninh Thuận" };
+        let html = ''; let hasDanger = false;
+        for (const item of raw.Data || []) {
+          const name = nameMap[item.StationCode] || item.StationCode;
+          const level = item.WaterLevel == null ? "N/A" : item.WaterLevel.toFixed(2) + "m";
+          const alarm3 = parseFloat(item.AlarmLevel3 || 0);
+          let status = "", cls = "bg-gray-600";
+          if (item.WaterLevel != null) {
+            const diff = item.WaterLevel - alarm3;
+            if (diff > 0) { status = `VƯỢT BĐ3 +${diff.toFixed(2)}m`; cls = "bg-red-600"; hasDanger = true; }
+            else { status = `Dưới BĐ3 -${(-diff).toFixed(2)}m`; cls = "bg-blue-600"; }
+          }
+          html += `<div class="p-3 rounded-lg font-bold text-white ${cls}">${name}: ${level} → ${status}</div>`;
+        }
+        document.getElementById('riverLevels').innerHTML = html || '<p class="text-center text-red-600">Không có dữ liệu</p>';
+        document.getElementById('updateTime').textContent = 'Cập nhật: ' + new Date().toLocaleString('vi-VN');
+        document.getElementById('waterAlertBanner').classList.toggle('hidden', !hasDanger);
+      } catch (e) {
+        document.getElementById('riverLevels').innerHTML = '<p class="text-center text-red-600">Lỗi kết nối KTTV</p>';
+      }
+    }
+
+    // === LOAD BÁO CÁO TỪ reports.js (thay thế hoàn toàn /api/reports) ===
+    async function loadReports() {
+      try {
+        const res = await fetch('/reports.js?t=' + Date.now());
+        const reports = await res.json();
+
+        const victims = reports.filter(r => !r.type || r.type === 'victim');
+        const rescues = reports.filter(r => r.type === 'rescue');
+        const warnings = reports.filter(r => r.type === 'warning');
+
+        document.getElementById('allCount').textContent = reports.length;
+        document.getElementById('victimCount').textContent = victims.length;
+        document.getElementById('victimCountLeft').textContent = victims.length;
+        document.getElementById('rescueCount').textContent = rescues.length;
+        document.getElementById('warningCount').textContent = warnings.length;
+
+        document.querySelectorAll('.badge-count').forEach(b => b.classList.toggle('zero', b.textContent === '0'));
+
+        document.getElementById('victimReports').innerHTML = victims.slice(0,20).map(r=>`
+          <div class="bg-red-100 p-4 rounded-lg border-l-4 border-red-600 pulse">
+            <p class="font-bold text-red-800">${r.message}</p>
+            ${r.phone ? `<p class="text-sm font-bold text-blue-700 mt-1">Liên hệ: ${r.phone}</p>` : ''}
+            <p class="text-xs text-gray-600 mt-1">Vừa xong • ${r.people||1} người</p>
+          </div>`).join('') || '<p class="text-center text-gray-500 py-8">Chưa có trường hợp khẩn cấp</p>';
+
+        document.getElementById('otherReports').innerHTML = [...rescues, ...warnings].slice(0,20).map(r=>`
+          <div class="bg-white p-4 rounded-lg border-l-4 ${r.type==='warning'?'border-orange-500':'border-blue-500'}">
+            <p class="font-bold ${r.type==='warning'?'text-orange-700':'text-blue-700'}">${r.message}</p>
+            ${r.phone ? `<p class="text-sm font-bold text-green-700">Liên hệ: ${r.phone}</p>` : ''}
+            <p class="text-xs text-gray-600">Vừa xong</p>
+          </div>`).join('') || '<p class="text-center text-gray-500 py-8">Chưa có thông báo</p>';
+      } catch (e) { console.error(e); }
+    }
+
+    // === GỬI YÊU CẦU CỨU HỘ QUA reports.js ===
+    document.getElementById('sendBtn').onclick = async () => {
       const msg = document.getElementById('message').value.trim();
       const phone = document.getElementById('phone').value.trim();
       const people = document.getElementById('people').value || 1;
       if (!msg || !phone) return alert('Vui lòng nhập đủ thông tin!');
-      
+
       await fetch('/reports.js', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lat, lng, message: msg, phone, people, type: 'victim' })
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({lat, lng, message: msg, phone, people, type: 'victim'})
       });
+
       alert('ĐÃ GỬI THÀNH CÔNG! Đội cứu hộ đang đến ngay!');
       closeReportForm();
-    }
+      loadReports();
+    };
 
-    window.onload = initMap;
+    // === KHỞI ĐỘNG ===
+    window.onload = () => {
+      initMap();
+      loadWaterData();
+      loadReports();
+      setInterval(loadReports, 8000);
+      setInterval(loadWaterData, 180000);
+    };
   </script>
 </body>
 </html>
