@@ -1,0 +1,16 @@
+# Bật Rewrite Engine
+RewriteEngine On
+
+# Ẩn đuôi .html cho tất cả các file
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^([a-zA-Z0-9_-]+)$ $1.html [L]
+
+# Redirect các path cụ thể
+RewriteRule ^trangchu$ trangchu.html [L]
+RewriteRule ^ungho$ ungho.html [L]
+RewriteRule ^quantri$ quantri.html [L]
+
+# Chặn hiển thị .html nếu người dùng cố gắng nhập
+RewriteCond %{THE_REQUEST} "^[A-Z]{3,}\s([^.]+)\.html\sHTTP" 
+RewriteRule ^ %1 [R=301,L]
