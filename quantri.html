@@ -7,6 +7,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script> <!-- Thư viện xuất Excel -->
   <style>
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #e2e8f0; margin: 0; }
     .card { background: rgba(30, 41, 59, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(148, 163, 184, 0.2); }
@@ -21,41 +22,41 @@
     .btn-gov:hover { background: #b91c1c; }
     .text-shadow { text-shadow: 0 2px 4px rgba(0,0,0,0.6); }
     .glow { box-shadow: 0 0 20px rgba(59, 130, 246, 0.5); }
+    
+    /* Scrollbar đẹp */
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #1e293b; }
+    ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #64748b; }
   </style>
 </head>
 <body class="min-h-screen">
-  <!-- HEADER QUỐC GIA - CỜ VIỆT NAM ĐỎ SAO VÀNG SIÊU ĐẸP -->
+
+  <!-- HEADER QUỐC GIA -->
   <div class="bg-red-600 text-white py-4 shadow-2xl relative overflow-hidden">
     <div class="absolute inset-0 opacity-10">
-      <svg viewBox="0 0 100 60" class="w-full h-full">
-        <rect width="100" height="60" fill="#da291c"/>
-        <path d="M50 15 L53.8 25.2 L64.5 25.2 L55.9 31.8 L58.6 42 L50 36 L41.4 42 L44.1 31.8 L35.5 25.2 L46.2 25.2 Z" fill="#ffff00"/>
-      </svg>
+      <svg viewBox="0 0 100 60" class="w-full h-full"><rect width="100" height="60" fill="#da291c"/><path d="M50 15 L53.8 25.2 L64.5 25.2 L55.9 31.8 L58.6 42 L50 36 L41.4 42 L44.1 31.8 L35.5 25.2 L46.2 25.2 Z" fill="#ffff00"/></svg>
     </div>
     <div class="max-w-7xl mx-auto px-6 flex items-center justify-between relative z-10">
       <div class="flex items-center gap-6">
         <div class="w-28 h-20 rounded-lg overflow-hidden shadow-2xl border-4 border-yellow-400">
-          <svg viewBox="0 0 90 60" class="w-full h-full">
-            <rect width="90" height="60" fill="#da291c"/>
-            <path d="M45 15 L48.8 25.2 L59.5 25.2 L50.9 31.8 L53.6 42 L45 36 L36.4 42 L39.1 31.8 L30.5 25.2 L41.2 25.2 Z" fill="#ffff00"/>
-          </svg>
+          <svg viewBox="0 0 90 60" class="w-full h-full"><rect width="90" height="60" fill="#da291c"/><path d="M45 15 L48.8 25.2 L59.5 25.2 L50.9 31.8 L53.6 42 L45 36 L36.4 42 L39.1 31.8 L30.5 25.2 L41.2 25.2 Z" fill="#ffff00"/></svg>
         </div>
         <div>
-          <h1 class="text-2xl md:text-3xl font-bold leading-tight"> CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM </h1>
-          <p class="text-xl md:text-2xl font-bold text-yellow-300"> Độc lập – Tự do – Hạnh phúc </p>
+          <h1 class="text-2xl md:text-3xl font-bold leading-tight">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</h1>
+          <p class="text-xl md:text-2xl font-bold text-yellow-300">Độc lập – Tự do – Hạnh phúc</p>
         </div>
       </div>
-      <div class="text-right">
+      <div class="text-right hidden md:block">
         <p class="text-2xl md:text-3xl font-bold">HỆ THỐNG CỨU HỘ KHẨN CẤP</p>
         <p class="text-lg md:text-xl font-semibold opacity-95">TỈNH KHÁNH HÒA & NINH THUẬN</p>
-        <p class="text-sm mt-2 bg-black/40 px-4 py-1 rounded-full inline-block border border-yellow-500"> Phiên bản 2025 – Chính quyền điện tử </p>
       </div>
     </div>
     <div class="absolute bottom-0 left-0 right-0 h-2 bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-400"></div>
   </div>
 
   <!-- MÀN HÌNH ĐĂNG NHẬP -->
-  <div id="loginScreen" class="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-black">
+  <div id="loginScreen" class="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-black -mt-32">
     <div class="card p-12 rounded-2xl shadow-2xl w-full max-w-lg border border-red-700 glow">
       <div class="text-center mb-8">
         <i class="fas fa-shield-alt text-6xl text-red-500 mb-4"></i>
@@ -64,23 +65,47 @@
       </div>
       <input type="text" id="username" placeholder="Tài khoản quản trị" class="w-full p-4 mb-4 rounded-lg bg-slate-800 text-white text-lg border border-gray-600 focus:border-red-500 focus:outline-none transition" />
       <input type="password" id="password" placeholder="Mật khẩu" class="w-full p-4 mb-6 rounded-lg bg-slate-800 text-white text-lg border border-gray-600 focus:border-red-500 focus:outline-none transition" />
-      <button onclick="login()" class="w-full btn-gov text-white py-4 rounded-lg text-xl font-bold transition shadow-lg hover:shadow-red-600/50"> ĐĂNG NHẬP HỆ THỐNG </button>
-      <p class="text-center mt-6 text-sm text-gray-400">Liên hệ: <strong>VNDisaster • Tạm Ẩn Thông Tin</strong></p>
+      <button onclick="login()" class="w-full btn-gov text-white py-4 rounded-lg text-xl font-bold transition shadow-lg hover:shadow-red-600/50">ĐĂNG NHẬP HỆ THỐNG</button>
     </div>
   </div>
 
   <!-- GIAO DIỆN QUẢN TRỊ -->
   <div id="adminPanel" class="hidden pb-10">
+
+    <!-- THANH CÔNG CỤ -->
     <div class="bg-gradient-to-r from-blue-900 to-blue-800 p-5 shadow-2xl flex flex-col md:flex-row justify-between items-center gap-4 sticky top-0 z-50">
       <div>
-        <h2 class="text-2xl font-bold text-yellow-300"> BẢNG ĐIỀU KHIỂN QUẢN TRỊ </h2>
+        <h2 class="text-2xl font-bold text-yellow-300">BẢNG ĐIỀU KHIỂN QUẢN TRỊ</h2>
         <p class="text-sm opacity-90">Cập nhật realtime • Phiên bản 2025</p>
       </div>
-      <button onclick="logout()" class="bg-red-700 hover:bg-red-800 px-8 py-3 rounded-lg font-bold transition"> Đăng xuất </button>
+      <button onclick="logout()" class="bg-red-700 hover:bg-red-800 px-8 py-3 rounded-lg font-bold transition">Đăng xuất</button>
     </div>
+
     <div class="max-w-7xl mx-auto p-6 space-y-8">
+
+      <!-- --- 1. THANH TÁC VỤ KHẨN CẤP (NEW FEATURES) --- -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 animate-slide-up">
+        <button onclick="templateEvacuate()" class="bg-red-600 hover:bg-red-700 text-white p-4 rounded-xl font-bold shadow-lg flex flex-col items-center gap-2 border border-red-400">
+            <i class="fas fa-bullhorn text-3xl"></i>
+            <span>MẪU LỆNH DI TẢN</span>
+        </button>
+        <button onclick="templateFlood()" class="bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-xl font-bold shadow-lg flex flex-col items-center gap-2 border border-blue-400">
+            <i class="fas fa-water text-3xl"></i>
+            <span>MẪU XẢ LŨ</span>
+        </button>
+        <button onclick="exportToExcel()" class="bg-green-600 hover:bg-green-700 text-white p-4 rounded-xl font-bold shadow-lg flex flex-col items-center gap-2 border border-green-400">
+            <i class="fas fa-file-excel text-3xl"></i>
+            <span>XUẤT DỮ LIỆU</span>
+        </button>
+        <button onclick="clearAllData()" class="bg-gray-700 hover:bg-red-900 text-white p-4 rounded-xl font-bold shadow-lg flex flex-col items-center gap-2 border border-gray-500">
+            <i class="fas fa-trash-alt text-3xl text-red-500"></i>
+            <span>XÓA TOÀN BỘ</span>
+        </button>
+      </div>
+
+      <!-- BẢN ĐỒ REALTIME -->
       <div class="card rounded-2xl p-6 shadow-2xl border border-blue-600 glow">
-        <h2 class="text-2xl font-bold mb-4 text-cyan-300 flex items-center gap-3"> BẢN ĐỒ CỨU HỘ REALTIME </h2>
+        <h2 class="text-2xl font-bold mb-4 text-cyan-300 flex items-center gap-3">BẢN ĐỒ CỨU HỘ REALTIME</h2>
         <div id="map"></div>
         <div class="mt-4 grid grid-cols-3 gap-4 text-center">
           <div class="bg-red-900/70 p-4 rounded-lg border border-red-600">
@@ -97,73 +122,142 @@
           </div>
         </div>
       </div>
+
+      <!-- GỬI CẢNH BÁO & ĐĂNG KÝ ĐỘI -->
       <div class="grid md:grid-cols-2 gap-8">
+        <!-- GỬI CẢNH BÁO -->
         <div class="card rounded-2xl p-6 border-2 border-orange-600 glow">
-          <h3 class="text-2xl font-bold text-orange-300 mb-5 flex items-center gap-3"> GỬI CẢNH BÁO KHẨN CẤP </h3>
+          <h3 class="text-2xl font-bold text-orange-300 mb-5 flex items-center gap-3">GỬI CẢNH BÁO KHẨN CẤP</h3>
+          <!-- Toolbar -->
           <div class="bg-slate-900/90 rounded-xl p-4 mb-4 border border-orange-500 shadow-lg">
             <div class="flex flex-wrap gap-2 items-center text-sm">
-              <button type="button" onclick="document.execCommand('bold')" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-bold transition">In đậm</button>
-              <button type="button" onclick="document.execCommand('italic')" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg italic transition">In nghiêng</button>
-              <button type="button" onclick="document.execCommand('underline')" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg underline transition">Gạch chân</button>
-              <select onchange="document.execCommand('foreColor', false, this.value)" class="px-4 py-2 bg-gray-700 text-white rounded-lg ml-3">
-                <option value="#ffffff">Màu trắng</option>
-                <option value="#ff0000">Đỏ</option>
-                <option value="#ffff00">Vàng</option>
-                <option value="#00ff00">Xanh lá</option>
-                <option value="#ff9900">Cam</option>
+              <button type="button" onclick="document.execCommand('bold')" class="px-3 py-1 bg-gray-700 rounded hover:bg-gray-600"><b>B</b></button>
+              <button type="button" onclick="document.execCommand('italic')" class="px-3 py-1 bg-gray-700 rounded hover:bg-gray-600"><i>I</i></button>
+              <button type="button" onclick="document.execCommand('underline')" class="px-3 py-1 bg-gray-700 rounded hover:bg-gray-600"><u>U</u></button>
+              <select onchange="document.execCommand('foreColor', false, this.value)" class="bg-gray-700 text-white rounded p-1">
+                <option value="#ffffff">Trắng</option><option value="#ff0000">Đỏ</option><option value="#ffff00">Vàng</option>
               </select>
-              <select onchange="document.execCommand('backColor', false, this.value)" class="px-4 py-2 bg-gray-700 text-white rounded-lg">
-                <option value="transparent">Không nền</option>
-                <option value="#dc2626">Nền đỏ</option>
-                <option value="#f59e0b">Nền vàng</option>
-                <option value="#1e40af">Nền xanh đậm</option>
+              <select onchange="document.execCommand('backColor', false, this.value)" class="bg-gray-700 text-white rounded p-1">
+                <option value="transparent">Ko nền</option><option value="#dc2626">Nền Đỏ</option><option value="#f59e0b">Nền Vàng</option>
               </select>
-              <select onchange="document.execCommand('fontSize', false, this.value)" class="px-4 py-2 bg-gray-700 text-white rounded-lg">
-                <option value="3">Nhỏ</option>
-                <option value="5">Trung bình</option>
-                <option value="7" selected>To</option>
+              <select onchange="document.execCommand('fontSize', false, this.value)" class="bg-gray-700 text-white rounded p-1">
+                <option value="3">Nhỏ</option><option value="5">Vừa</option><option value="7" selected>To</option>
               </select>
-              <button type="button" onclick="document.execCommand('removeFormat')" class="ml-auto px-4 py-2 bg-red-700 hover:bg-red-800 rounded-lg text-sm transition"> Xóa định dạng </button>
             </div>
           </div>
-          <div id="warnMsg" contenteditable="true" class="w-full min-h-56 p-6 rounded-xl bg-slate-900/95 text-white border-2 border-orange-500 focus:border-orange-400 outline-none text-lg leading-relaxed shadow-inner overflow-y-auto" style="max-height: 400px; background: rgba(15,23,42,0.95);" oninput="this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px';">
-            <p style="color:#ff0000; font-size:28px;"><strong>CẢNH BÁO KHẨN CẤP</strong></p>
-            <p style="color:#ffff00; background:#dc2626; padding:12px; border-radius:12px; display:inline-block; font-size:22px;">
-              <strong>LŨ QUÉT - SẠT LỞ ĐẤT TẠI CAM RANH - DIÊN KHÁNH</strong>
-            </p>
-            <p style="margin-top:16px;">Người dân khẩn trương di chuyển đến các điểm trú ẩn an toàn!</p>
-            <p style="color:#00ff00; margin-top:12px;">Liên hệ cứu hộ: <strong>115</strong> hoặc <strong>114</strong></p>
+          <div id="warnMsg" contenteditable="true" class="w-full min-h-56 p-6 rounded-xl bg-slate-900/95 text-white border-2 border-orange-500 focus:border-orange-400 outline-none text-lg leading-relaxed shadow-inner overflow-y-auto" style="max-height: 400px;">
           </div>
-          <button onclick="addWarning()" class="mt-5 w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 py-5 rounded-xl font-bold text-xl text-white transition shadow-xl flex items-center justify-center gap-3">
-            GỬI CẢNH BÁO TOÀN TỈNH NGAY LẬP TỨC
-          </button>
+          <button onclick="addWarning()" class="mt-5 w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 py-4 rounded-xl font-bold text-xl text-white transition shadow-xl">GỬI CẢNH BÁO TOÀN TỈNH</button>
         </div>
+
+        <!-- ĐĂNG KÝ ĐỘI CỨU HỘ -->
         <div class="card rounded-2xl p-6 border-2 border-blue-600 glow">
-          <h3 class="text-xl font-bold text-blue-300 mb-4 flex items-center gap-3"> ĐĂNG KÝ ĐỘI CỨU HỘ </h3>
-          <input type="text" id="rescueName" placeholder="Tên đội / Đơn vị (ví dụ: Đội Dân quân Cam Lâm)" class="w-full p-4 mb-3 rounded bg-slate-800 text-white border border-gray-600 focus:border-blue-500 outline-none" />
+          <h3 class="text-xl font-bold text-blue-300 mb-4">ĐĂNG KÝ ĐỘI CỨU HỘ</h3>
+          <input type="text" id="rescueName" placeholder="Tên đội / Đơn vị" class="w-full p-4 mb-3 rounded bg-slate-800 text-white border border-gray-600 focus:border-blue-500 outline-none" />
           <input type="tel" id="rescuePhone" placeholder="Số điện thoại liên lạc" class="w-full p-4 mb-4 rounded bg-slate-800 text-white border border-gray-600 focus:border-blue-500 outline-none" />
-          <button onclick="addRescueTeam()" class="w-full bg-blue-600 hover:bg-blue-700 py-4 rounded font-bold text-lg transition"> ĐĂNG KÝ SẴN SÀNG </button>
+          <button onclick="addRescueTeam()" class="w-full bg-blue-600 hover:bg-blue-700 py-4 rounded font-bold text-lg transition">ĐĂNG KÝ SẴN SÀNG</button>
         </div>
       </div>
+
+      <!-- DANH SÁCH CHI TIẾT + TÌM KIẾM -->
       <div class="card rounded-2xl p-6 shadow-2xl border border-gray-600">
-        <h2 class="text-2xl font-bold mb-6 text-yellow-400 flex items-center gap-3"> DANH SÁCH BÁO CÁO CHI TIẾT </h2>
-        <div id="allReports" class="space-y-4"></div>
+        <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+            <h2 class="text-2xl font-bold text-yellow-400 flex items-center gap-3">DANH SÁCH BÁO CÁO</h2>
+            <!-- --- 2. Ô TÌM KIẾM (SEARCH) --- -->
+            <div class="relative w-full md:w-96">
+                <input type="text" id="searchInput" onkeyup="filterReports()" placeholder="Tìm theo SĐT hoặc nội dung..." class="w-full p-3 pl-10 rounded-full bg-slate-700 text-white border border-gray-500 focus:border-blue-400 outline-none shadow-inner" />
+                <i class="fas fa-search absolute left-4 top-3.5 text-gray-400"></i>
+            </div>
+        </div>
+        <div id="allReports" class="space-y-4 max-h-[800px] overflow-y-auto pr-2"></div>
       </div>
     </div>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    const ADMIN_ACCOUNTS = [
-      { username: "admin", password: "Lenhan@123" },
-      { username: "canbo", password: "cuuho2025" },
-      { username: "admin1", password: "123456" },
-      { username: "khanhhoa", password: "kh2025" },
-      { username: "ninhthuan", password: "nt2025" }
-    ];
+    const ADMIN_ACCOUNTS = [{username:"admin",password:"Lenhan@123"},{username:"canbo",password:"1"},{username:"khanhhoa",password:"1"}];
     let map, markers = L.layerGroup();
     let currentReports = [];
 
+    // --- CÁC CHỨC NĂNG KHẨN CẤP MỚI ---
+
+    // 1. Mẫu Lệnh Di Tản
+    function templateEvacuate() {
+        const t = document.getElementById('warnMsg');
+        t.innerHTML = `
+            <p style="text-align: center;"><span style="color: #ff0000; font-size: xxx-large;"><strong>LỆNH DI TẢN KHẨN CẤP</strong></span></p>
+            <p style="text-align: center;"><span style="background-color: #dc2626; color: #ffff00; padding: 5px 10px; border-radius: 5px; font-size: x-large;"><strong>KHU VỰC NGUY HIỂM CẤP ĐỘ 5</strong></span></p>
+            <p><strong>⚠️ YÊU CẦU:</strong> Toàn bộ người dân tại vùng trũng thấp di chuyển ngay lên vùng cao/nhà kiên cố.</p>
+            <p><strong>⏳ THỜI GIAN:</strong> Phải hoàn thành trước 18:00 hôm nay.</p>
+            <p><strong>📞 HỖ TRỢ:</strong> Gọi ngay 114 nếu không thể di chuyển.</p>
+        `;
+    }
+
+    // 2. Mẫu Xả Lũ
+    function templateFlood() {
+        const t = document.getElementById('warnMsg');
+        t.innerHTML = `
+            <p><span style="color: #0000ff; font-size: xx-large;"><strong>⚠️ THÔNG BÁO XẢ LŨ HỒ CHỨA</strong></span></p>
+            <p>Lúc <strong>... giờ ... phút</strong>, Hồ chứa nước ... sẽ tiến hành xả lũ.</p>
+            <p>Lưu lượng xả dự kiến: <strong>... m3/s</strong>.</p>
+            <p><span style="color: #ff0000;">Bà con ven sông chú ý neo đậu tàu thuyền, không chăn thả gia súc ven bờ.</span></p>
+        `;
+    }
+
+    // 3. Xuất Excel
+    function exportToExcel() {
+        if(currentReports.length === 0) return alert('Không có dữ liệu để xuất!');
+        // Chuẩn hóa dữ liệu
+        const data = currentReports.map(r => ({
+            "Thời gian": r.timestamp,
+            "Loại": r.type === 'victim' ? 'Cấp cứu' : (r.type === 'rescue' ? 'Đội cứu hộ' : 'Cảnh báo'),
+            "Nội dung": r.message.replace(/<[^>]*>?/gm, ''), // Xóa HTML tag
+            "SĐT": r.phone || '',
+            "Số người": r.people || '',
+            "Vĩ độ": r.lat,
+            "Kinh độ": r.lng,
+            "IP Gửi": r.ip
+        }));
+
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "BaoCao");
+        const filename = `DuLieu_CuuHo_${new Date().toISOString().slice(0,10)}.xlsx`;
+        XLSX.writeFile(wb, filename);
+    }
+
+    // 4. Xóa Tất Cả
+    async function clearAllData() {
+        const code = prompt("NHẬP MÃ XÁC NHẬN ĐỂ XÓA TOÀN BỘ DỮ LIỆU:\n(Nhập: 'reset')");
+        if(code !== 'reset') return alert('Mã sai! Hủy thao tác.');
+        
+        // Loop xóa từng cái (Vì API backend đơn giản chưa có endpoint delete_all)
+        // Cách này hơi thủ công nhưng an toàn với code backend hiện tại
+        if(confirm('CẢNH BÁO CUỐI: Toàn bộ dữ liệu sẽ bị xóa vĩnh viễn?')) {
+            const btn = document.querySelector('button[onclick="clearAllData()"]');
+            btn.innerHTML = '⏳ ĐANG XÓA...';
+            
+            for(let r of currentReports) {
+                await fetch(`/api/reports/${r.id}`, { method: 'DELETE' });
+            }
+            alert('Đã xóa sạch hệ thống!');
+            loadAllReports();
+            btn.innerHTML = '<i class="fas fa-trash-alt text-3xl text-red-500"></i><span>XÓA TOÀN BỘ</span>';
+        }
+    }
+
+    // 5. Tìm kiếm (Client-side)
+    function filterReports() {
+        const term = document.getElementById('searchInput').value.toLowerCase();
+        const items = document.querySelectorAll('.report-item');
+        items.forEach(item => {
+            const text = item.innerText.toLowerCase();
+            item.style.display = text.includes(term) ? 'block' : 'none';
+        });
+    }
+
+    // --- CÁC HÀM CŨ ---
     function login() {
       const user = document.getElementById('username').value.trim();
       const pass = document.getElementById('password').value;
@@ -172,130 +266,80 @@
         document.getElementById('adminPanel').classList.remove('hidden');
         initMap();
         loadAllReports();
-        setInterval(loadAllReports, 8000);
-      } else {
-        alert('Thông tin đăng nhập không chính xác!');
-      }
+        setInterval(loadAllReports, 5000);
+      } else { alert('Sai mật khẩu!'); }
     }
-
-    function logout() {
-      document.getElementById('loginScreen').classList.remove('hidden');
-      document.getElementById('adminPanel').classList.add('hidden');
-      document.getElementById('username').value = '';
-      document.getElementById('password').value = '';
-    }
+    function logout() { location.reload(); }
 
     function initMap() {
       map = L.map('map').setView([12.24, 109.19], 10);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap | Hệ thống cứu hộ Khánh Hòa - Ninh Thuận'
-      }).addTo(map);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
       markers.addTo(map);
     }
 
-    function createMarker(report) {
-      const isVictim = !report.type || report.type === 'victim';
-      const iconClass = isVictim ? 'marker-pin pulse' : report.type === 'rescue' ? 'marker-pin marker-rescue pulse' : 'marker-pin marker-warning pulse';
-      const icon = L.divIcon({
-        className: "custom-div-icon",
-        html: `<div class="${iconClass}"></div>`,
-        iconSize: [36, 36],
-        iconAnchor: [18, 36]
-      });
-      const popup = L.popup({ maxWidth: 400, className: 'custom-popup' })
-        .setContent(`
-          <div class="bg-gray-900 text-white p-5 rounded-lg border ${isVictim ? 'border-red-500' : report.type === 'rescue' ? 'border-blue-500' : 'border-orange-500'}">
-            <h3 class="font-bold text-xl ${isVictim ? 'text-red-400' : 'text-blue-400'}">
-              ${isVictim ? 'CẦN CỨU HỘ KHẨN CẤP' : report.type === 'rescue' ? 'ĐỘI CỨU HỘ' : 'CẢNH BÁO'}
-            </h3>
-            <hr class="my-3 border-gray-700">
-            <div class="text-sm leading-relaxed">${report.message}</div>
-            ${report.phone ? `<p class="mt-3 text-green-400 font-bold">Liên hệ: ${report.phone}</p>` : ''}
-            ${report.people ? `<p class="text-yellow-300">Số người: ${report.people}</p>` : ''}
-            <p class="text-xs text-gray-400 mt-3">${new Date(report.timestamp).toLocaleString('vi-VN')}</p>
-          </div>
-        `);
-      L.marker([report.lat, report.lng], { icon }).addTo(markers).bindPopup(popup);
+    function createMarker(r) {
+      const isVictim = !r.type || r.type === 'victim';
+      const iconClass = isVictim ? 'marker-pin pulse' : r.type === 'rescue' ? 'marker-pin marker-rescue pulse' : 'marker-pin marker-warning pulse';
+      const icon = L.divIcon({className: "custom-div-icon", html: `<div class="${iconClass}"></div>`, iconSize: [36, 36], iconAnchor: [18, 36]});
+      const popup = `<div class="bg-gray-900 text-white p-3 rounded"><b>${r.message}</b><br>${r.phone||''}</div>`;
+      L.marker([r.lat, r.lng], { icon }).addTo(markers).bindPopup(popup);
     }
 
-    // ĐÃ SỬA: DÙNG /api/index
     async function loadAllReports() {
       try {
-        const res = await fetch('/api/index?admin=true&t=' + Date.now());
+        const res = await fetch('/api/reports?admin=true&t=' + Date.now());
         const reports = await res.json();
         currentReports = reports;
         markers.clearLayers();
-        const victims = reports.filter(r => !r.type || r.type === 'victim').length;
-        const rescues = reports.filter(r => r.type === 'rescue').length;
-        document.getElementById('victimCount').textContent = victims;
-        document.getElementById('rescueCount').textContent = rescues;
+        
+        let v=0, re=0;
+        const html = reports.map(r => {
+            if(!r.type || r.type === 'victim') v++;
+            if(r.type === 'rescue') re++;
+            const isVictim = !r.type || r.type === 'victim';
+            const bg = isVictim ? 'border-red-600' : r.type === 'rescue' ? 'border-blue-600' : 'border-orange-600';
+            const txt = isVictim ? 'text-red-400' : r.type === 'rescue' ? 'text-blue-400' : 'text-orange-400';
+            
+            return `
+            <div class="report-item bg-slate-800/80 p-5 rounded-xl border-l-8 ${bg} hover:bg-slate-700/80 transition relative">
+              <div class="font-bold text-lg ${txt}">${r.message}</div>
+              ${r.phone ? `<div class="text-green-400 font-bold mt-1"><i class="fas fa-phone"></i> ${r.phone}</div>` : ''}
+              ${r.people ? `<div class="text-yellow-300">Người: ${r.people}</div>` : ''}
+              <div class="text-xs text-gray-500 mt-2">${r.timestamp} • IP: ${r.ip||'N/A'}</div>
+              <button onclick="deleteReport(${r.id})" class="absolute top-4 right-4 text-red-500 text-2xl font-bold">×</button>
+            </div>`;
+        }).join('');
+        
+        document.getElementById('victimCount').textContent = v;
+        document.getElementById('rescueCount').textContent = re;
         document.getElementById('totalReports').textContent = reports.length;
-        document.getElementById('allReports').innerHTML = reports.map(r => {
-          const isVictim = !r.type || r.type === 'victim';
-          return `
-            <div class="bg-slate-800/80 p-5 rounded-xl border-l-8 ${isVictim ? 'border-red-600' : r.type === 'rescue' ? 'border-blue-600' : 'border-orange-600'} hover:bg-slate-700/80 transition">
-              <div class="flex justify-between items-start">
-                <div class="flex-1">
-                  <div class="font-bold text-lg ${isVictim ? 'text-red-400' : r.type === 'rescue' ? 'text-blue-400' : 'text-orange-400'} prose prose-invert max-w-none">
-                    ${r.type === 'warning' ? r.message : `<p>${r.message}</p>`}
-                  </div>
-                  ${r.phone ? `<p class="text-green-400 font-bold mt-2">Liên hệ: ${r.phone}</p>` : ''}
-                  ${r.people ? `<p class="text-yellow-300">Số người cần cứu: ${r.people}</p>` : ''}
-                  <p class="text-sm text-gray-400 mt-2">${new Date(r.timestamp).toLocaleString('vi-VN')}</p>
-                </div>
-                <button onclick="deleteReport(${r.id})" class="ml-4 text-red-500 hover:text-red-300 font-bold text-2xl">×</button>
-              </div>
-            </div>
-          `;
-        }).join('') || '<p class="text-center text-gray-500 py-10">Chưa có báo cáo nào</p>';
+        document.getElementById('allReports').innerHTML = html;
         reports.forEach(createMarker);
-      } catch (e) { console.error(e); }
+        
+        // Giữ bộ lọc tìm kiếm nếu đang nhập
+        filterReports();
+      } catch (e) {}
     }
 
-    // ĐÃ SỬA: XÓA BÁO CÁO
     async function deleteReport(id) {
-      if (confirm('Xác nhận XÓA báo cáo này khỏi hệ thống?')) {
-        await fetch(`/api/index/${id}`, { method: 'DELETE' });
+      if (confirm('Xóa báo cáo này?')) {
+        await fetch(`/api/reports/${id}`, { method: 'DELETE' });
         loadAllReports();
       }
     }
 
-    // ĐÃ SỬA: GỬI CẢNH BÁO
     async function addWarning() {
-      const editor = document.getElementById('warnMsg');
-      const htmlContent = editor.innerHTML.trim();
-      if (!htmlContent || htmlContent === '<br>' || htmlContent === '<p><br></p>') {
-        return alert('Vui lòng nhập nội dung cảnh báo!');
-      }
-      await fetch('/api/index', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ lat: 12.24, lng: 109.19, message: htmlContent, type: 'warning' })
-      });
-      alert('ĐÃ GỬI CẢNH BÁO THÀNH CÔNG TOÀN TỈNH!');
-      editor.innerHTML = '';
-      loadAllReports();
+      const html = document.getElementById('warnMsg').innerHTML;
+      await fetch('/api/reports', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ lat: 12.24, lng: 109.19, message: html, type: 'warning' }) });
+      alert('Đã gửi cảnh báo!'); document.getElementById('warnMsg').innerHTML = ''; loadAllReports();
     }
-
-    // ĐÃ SỬA: ĐĂNG KÝ ĐỘI CỨU HỘ
     async function addRescueTeam() {
-      const name = document.getElementById('rescueName').value.trim();
-      const phone = document.getElementById('rescuePhone').value.trim();
-      if (!name || !phone) return alert('Vui lòng nhập đầy đủ thông tin!');
-      await fetch('/api/index', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ lat: 12.24, lng: 109.19, message: `ĐỘI CỨU HỘ: ${name}`, phone, type: 'rescue' })
-      });
-      alert('Đã đăng ký đội cứu hộ thành công!');
-      document.getElementById('rescueName').value = '';
-      document.getElementById('rescuePhone').value = '';
-      loadAllReports();
+        const name = document.getElementById('rescueName').value;
+        const phone = document.getElementById('rescuePhone').value;
+        if(!name || !phone) return alert('Thiếu thông tin');
+        await fetch('/api/reports', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ lat: 12.24, lng: 109.19, message: `ĐỘI CỨU HỘ: ${name}`, phone, type: 'rescue' }) });
+        alert('Đã thêm đội!'); loadAllReports();
     }
-
-    let timeout;
-    function resetTimer() { clearTimeout(timeout); timeout = setTimeout(logout, 30*60*1000); }
-    window.onload = () => { resetTimer(); document.onmousemove = document.onkeypress = resetTimer; };
   </script>
 </body>
 </html>
