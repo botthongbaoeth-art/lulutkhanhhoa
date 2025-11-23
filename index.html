@@ -14,7 +14,6 @@
     #map { height: 100% !important; width: 100% !important; z-index: 0; }
     .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
 
-    /* Custom Pin CSS */
     .pin-icon {
         background-color: #dc2626;
         width: 36px; height: 36px;
@@ -28,14 +27,12 @@
     }
     .pin-inner { transform: rotate(45deg); color: white; font-size: 14px; margin-top: 2px; }
     .leaflet-dragging .pin-icon { transform: rotate(-45deg) scale(1.2) translateY(-10px); transition: all 0.2s ease; }
-    
-    /* Animation */
+
     @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
     .animate-blink { animation: blink 1s infinite; }
     .slide-up { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
     @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 
-    /* THAY ĐỔI: CSS cho nút di chuyển theo panel */
     .btn-slide-up { transition: bottom 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
   </style>
 </head>
@@ -145,19 +142,15 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    // === VARIABLES ===
     let map, marker, accuracyCircle;
     let lat = 12.24, lng = 109.19; // Default
     let currentAddress = "Chưa xác định";
     let allReports = [];
     
-    // THAY ĐỔI: Khai báo biến DOM cho các nút và panel
     const gpsBtn = document.getElementById('gpsBtn');
     const sendReportBtn = document.getElementById('sendReportBtn');
     const infoPanel = document.getElementById('infoPanel');
 
-
-    // === MAP & GPS LOGIC ===
     function initMap() {
       map = L.map('map', { zoomControl: false }).setView([lat, lng], 11);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '' }).addTo(map);
@@ -240,9 +233,19 @@
         }
     }
 
-    // === DATA FETCHING & RENDERING ===
+    // --- Hàm format thời gian sang giờ VN GMT+7 ---
+    function formatToVNTime(ts) {
+        if(!ts) return '';
+        const date = new Date(ts + 'Z'); // UTC
+        return date.toLocaleString('vi-VN', { 
+            hour: '2-digit', minute: '2-digit', second: '2-digit',
+            day: '2-digit', month: '2-digit', year: 'numeric',
+            hour12: false, timeZone: 'Asia/Ho_Chi_Minh'
+        });
+    }
+
     async function loadData() {
-        // 1. Load Water Levels
+        // 1. Water Levels
         try {
             const wRes = await fetch('/static/waterdata.json?t=' + Date.now());
             const wData = await wRes.json();
@@ -253,169 +256,70 @@
                 let cls = "text-gray-600"; 
                 let icon = "fa-check-circle text-green-500";
                 
-                if (!isNaN(level) && alarm3 > 0) {
-                    if (level > alarm3) { 
-                        cls = "text-red-600 font-bold animate-blink"; 
-                        icon = "fa-exclamation-triangle text-red-600"; 
-                    } else if (level > alarm3 - 0.5) { 
-                        cls = "text-orange-600 font-bold"; 
-                        icon = "fa-exclamation-circle text-orange-500"; 
-                    }
-                }
-                wHtml += `<div class="flex justify-between items-center bg-white p-2 rounded border border-gray-100"><div class="flex items-center gap-2"><i class="fas ${icon} text-xs"></i><span class="text-gray-700 font-medium">${item.StationName}</span></div><div class="${cls}">${isNaN(level) ? '--' : level.toFixed(2)}m</div></div>`;
+                if (!isNaN(level) && alarm3 > 0) { cls = "text-red-600 font-bold"; icon = "fa-triangle-exclamation text-red-600"; }
+
+                wHtml += `<div class="flex justify-between items-center"><span>${item.Name}</span><span class="${cls}"><i class="fas ${icon} mr-1"></i>${level || '-'}m</span></div>`;
             });
-            document.getElementById('riverLevels').innerHTML = wHtml || '<div class="text-center text-gray-400">Đang cập nhật...</div>';
-            document.getElementById('updateTime').textContent = wData.UpdateTime || '';
-        } catch(e) { console.log("Water Err", e); }
+            document.getElementById('riverLevels').innerHTML = wHtml;
 
-        // 2. Load Reports
+            if(wData.UpdateTime) {
+                document.getElementById('updateTime').textContent = formatToVNTime(wData.UpdateTime);
+            }
+        } catch(e) {
+            console.error(e);
+        }
+
+        // 2. Reports
         try {
-            const rRes = await fetch('/api/reports');
+            const rRes = await fetch('/static/reports.json?t=' + Date.now());
             allReports = await rRes.json();
-            renderReports('all');
-        } catch(e) { console.log("Report Err", e); }
+            renderReports();
+        } catch(e) {
+            console.error(e);
+        }
     }
 
-    function renderReports(filterType) {
-        const list = document.getElementById('reportsList');
-        const victims = allReports.filter(r => r.type === 'victim');
-        
-        // Update counts
-        document.getElementById('allCount').textContent = allReports.length;
-        document.getElementById('victimCount').textContent = victims.length;
-        document.getElementById('victimCountLeft').textContent = victims.length;
+    function renderReports(filter='all') {
+        const container = document.getElementById('reportsList');
+        container.innerHTML = '';
+        let victimCount = 0;
 
-        // Filter
-        let displayData = allReports;
-        if (filterType === 'victim') displayData = victims;
-        if (filterType === 'rescue') displayData = allReports.filter(r => r.type === 'rescue');
+        allReports.forEach(r => {
+            if(filter !== 'all' && r.type !== filter) return;
+            if(r.type === 'victim') victimCount++;
 
-        if (displayData.length === 0) {
-            list.innerHTML = '<div class="text-center py-6 text-gray-400 bg-white/50 rounded-xl border border-dashed border-gray-300">Chưa có tin nào</div>';
-            return;
-        }
+            const timeVN = formatToVNTime(r.timestamp);
 
-        list.innerHTML = displayData.map(r => {
-            const ggMapLink = `https://www.google.com/maps?q=$${r.lat},${r.lng}`;
-            
-            // XỬ LÝ BADGE HIỂN THỊ
-            let borderClass = 'border-blue-500 bg-white';
-            let badge = '';
-
-            if (r.type === 'victim') {
-                borderClass = 'border-red-500 bg-red-50';
-                badge = '<span class="bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded animate-pulse">CẤP CỨU</span>';
-            } else if (r.type === 'warning') {
-                borderClass = 'border-yellow-500 bg-yellow-50';
-                badge = '<span class="bg-yellow-600 text-white text-[10px] font-bold px-2 py-1 rounded animate-pulse">THÔNG BÁO KHẨN</span>';
-            } else if (r.type === 'rescue') {
-                borderClass = 'border-blue-500 bg-blue-50';
-                badge = '<span class="bg-blue-600 text-white text-[10px] font-bold px-2 py-1 rounded">ĐỘI CỨU HỘ</span>';
-            }
-
-            return `<div class="p-3 rounded-xl shadow-sm border-l-4 ${borderClass} relative transition hover:shadow-md">
-                <div class="flex justify-between items-start mb-1">
-                    <div class="flex gap-2 items-center">
-                        ${badge}
-                        <span class="text-[10px] text-gray-500 font-medium">${r.timestamp}</span>
+            const html = `
+            <div class="bg-white shadow-lg rounded-xl p-3 border border-gray-100">
+                <div class="flex justify-between items-start">
+                    <div class="flex-1">
+                        <p class="text-sm font-bold text-gray-700 line-clamp-2">${r.message}</p>
+                        <p class="text-[10px] text-gray-400 mt-1">SDT: ${r.phone || '-'}</p>
+                        <p class="text-[10px] text-gray-400 mt-0.5">Số người: ${r.people || 1}</p>
                     </div>
+                    <span class="text-[10px] text-gray-500 font-medium ml-2">${timeVN}</span>
                 </div>
-                
-                <p class="font-bold text-gray-800 text-sm mb-2 break-words">${r.message}</p>
-                
-                <div class="flex flex-wrap gap-2 mb-2">
-                    <div class="bg-white/80 px-2 py-1 rounded text-xs border border-gray-200">
-                        <i class="fas fa-user-group text-gray-500 mr-1"></i> <b>${r.people || 1}</b> người
-                    </div>
-                    <div class="bg-white/80 px-2 py-1 rounded text-xs border border-gray-200">
-                        <i class="fas fa-phone text-gray-500 mr-1"></i> <a href="tel:${r.phone}" class="font-bold text-blue-600">${r.phone || 'SĐT?'}</a>
-                    </div>
-                </div>
-
-                <a href="${ggMapLink}" target="_blank" class="block w-full text-center bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-bold text-xs py-2 rounded-lg transition flex items-center justify-center gap-2">
-                    <i class="fas fa-map-location-dot text-red-500"></i> Mở Google Maps
-                </a>
             </div>`;
-        }).join('');
-    }
-
-    function filterReports(type) {
-        document.querySelectorAll('header button').forEach(b => {
-            if(b.id !== 'btn-' + type) {
-                b.classList.add('opacity-70');
-            } else {
-                b.classList.remove('opacity-70');
-            }
+            container.insertAdjacentHTML('beforeend', html);
         });
-        renderReports(type);
+
+        document.getElementById('victimCountLeft').textContent = victimCount;
+        document.getElementById('victimCount').textContent = victimCount;
+        document.getElementById('allCount').textContent = allReports.length;
+        document.getElementById('rescueCount').textContent = allReports.filter(r => r.type === 'rescue').length;
     }
 
-    // === UI INTERACTIONS ===
-    let isPanelExpanded = false;
-    // THAY ĐỔI: Hàm togglePanel được sửa để điều chỉnh vị trí các nút
-    function togglePanel() {
-        isPanelExpanded = !isPanelExpanded;
-        
-        if (isPanelExpanded) {
-            // Mở rộng Panel (cao 85vh)
-            infoPanel.classList.add('h-[85vh]');
-            infoPanel.classList.remove('h-[18vh]'); 
-            
-            // Đẩy nút lên để cách panel 
-            // 85vh (cao panel) + 6vh (lề) = 91vh
-            gpsBtn.style.bottom = '91vh'; 
-            // 85vh (cao panel) + 1vh (lề) = 86vh, để cách nút GPS 5vh
-            sendReportBtn.style.bottom = '80vh'; // Sửa lại thành 80vh để không bị khuất 
+    function filterReports(type) { renderReports(type); }
 
-        } else {
-            // Thu gọn Panel (cao 18vh)
-            infoPanel.classList.remove('h-[85vh]');
-            infoPanel.classList.add('h-[18vh]'); 
-
-            // Trả nút về vị trí ban đầu
-            gpsBtn.style.bottom = '22vh'; 
-            sendReportBtn.style.bottom = '12vh'; 
-        }
-    }
-
+    function togglePanel() { infoPanel.classList.toggle('h-[18vh]'); }
 
     function openReportForm() { document.getElementById('reportForm').classList.remove('hidden'); }
     function closeReportForm() { document.getElementById('reportForm').classList.add('hidden'); }
 
-    document.getElementById('sendBtn').onclick = async () => {
-        const msg = document.getElementById('message').value.trim();
-        const phone = document.getElementById('phone').value.trim();
-        const people = document.getElementById('people').value || 1;
-
-        if (!msg || !phone) return alert('Vui lòng nhập SĐT và nội dung!');
-
-        // Ghép địa chỉ vào nội dung để hiển thị rõ hơn
-        const fullMsg = `${msg} \n(Tại: ${currentAddress})`;
-        
-        const btn = document.getElementById('sendBtn');
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang gửi...'; btn.disabled = true;
-
-        try {
-            await fetch('/api/reports', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ lat, lng, message: fullMsg, phone, people, type: 'victim' })
-            });
-            alert('ĐÃ GỬI CỨU HỘ! Đừng di chuyển, giữ điện thoại liên lạc.');
-            closeReportForm();
-            loadData();
-            document.getElementById('message').value = '';
-        } catch(e) { alert('Lỗi kết nối!'); }
-        
-        btn.innerHTML = '<i class="fas fa-paper-plane"></i> GỬI YÊU CẦU'; btn.disabled = false;
-    };
-
-    // === START ===
-    window.onload = () => {
-        initMap();
-        loadData();
-        setInterval(loadData, 5000); // Cập nhật mỗi 5 giây
-    };
+    initMap();
+    loadData();
+    setInterval(loadData, 30000); // update 30s
   </script>
 </body>
 </html>
